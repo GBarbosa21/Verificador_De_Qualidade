@@ -4,56 +4,48 @@ import io
 
 # --- FUNÇÃO PRINCIPAL PARA ANÁLISE DO PDF ---
 def extrair_dpi_de_pdf(conteudo_pdf_em_bytes):
-    """
-    Analisa o conteúdo de um PDF (em bytes) e retorna uma lista com informações de DPI.
-    """
+    # ... (O conteúdo desta função permanece o mesmo) ...
     resultados = []
     try:
-        # Abre o PDF a partir dos bytes em memória
         documento = fitz.open("pdf", conteudo_pdf_em_bytes)
     except Exception as e:
         st.error(f"Erro ao ler o arquivo PDF: {e}")
         return []
-
-    # Iterar por cada página do documento
     for num_pagina in range(len(documento)):
         pagina = documento.load_page(num_pagina)
         lista_de_imagens = pagina.get_images(full=True)
-
         if not lista_de_imagens:
             continue
-
-        # Iterar por cada imagem encontrada na página
         for img_info in lista_de_imagens:
             xref = img_info[0]
             base_image = documento.extract_image(xref)
-
             largura_px = base_image["width"]
             altura_px = base_image["height"]
-
             rect_list = pagina.get_image_rects(xref)
             if not rect_list:
                 continue
-
             rect = rect_list[0]
             largura_pontos = rect.width
             altura_pontos = rect.height
-
             largura_polegadas = largura_pontos / 72.0
             altura_polegadas = altura_pontos / 72.0
-
             dpi_x = round(largura_px / largura_polegadas) if largura_polegadas > 0 else 0
             dpi_y = round(altura_px / altura_polegadas) if altura_polegadas > 0 else 0
-
             resultados.append({
                 "pagina": num_pagina + 1,
                 "resolucao_px": f"{largura_px}x{altura_px}",
                 "dpi_x": dpi_x,
                 "dpi_y": dpi_y
             })
-
     documento.close()
     return resultados
+
+# --- FUNÇÃO DE LIMPEZA CORRIGIDA ---
+def limpar_arquivo():
+    """Esta função será chamada quando o botão for clicado."""
+    # A MUDANÇA ESTÁ AQUI: usamos 'del' em vez de '= None'
+    if 'file_uploader_key' in st.session_state:
+        del st.session_state['file_uploader_key']
 
 # --- INTERFACE DA APLICAÇÃO COM STREAMLIT ---
 
@@ -63,7 +55,11 @@ st.title("🔎 Analisador de Resolução (DPI) de Imagens em PDF")
 st.write("Faça o upload de um arquivo PDF para verificar a resolução das imagens contidas nele.")
 st.markdown("---")
 
-uploaded_file = st.file_uploader("Escolha um arquivo PDF", type="pdf")
+uploaded_file = st.file_uploader(
+    "Escolha um arquivo PDF",
+    type="pdf",
+    key="file_uploader_key"
+)
 
 if uploaded_file is not None:
     pdf_bytes = uploaded_file.getvalue()
@@ -96,3 +92,6 @@ if uploaded_file is not None:
                     col4.metric(label="", value=f"{img['dpi_y']}", delta="- Baixa Qualidade", delta_color="inverse")
                 else:
                      col4.metric(label="", value=f"{img['dpi_y']}")
+
+    st.markdown("---")
+    st.button("Limpar e Iniciar Nova Análise", on_click=limpar_arquivo)
